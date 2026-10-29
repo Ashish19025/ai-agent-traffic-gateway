@@ -36,8 +36,87 @@ Resources:
       PrimaryKey:
         Name: clientId
         Type: String
+  GatewayUserPool:
+    Type: AWS::Cognito::UserPool
+    Properties:
+      UserPoolName:
+        Fn::Sub: ${AWS::StackName}-UserPool
+      AutoVerifiedAttributes:
+      - email
+      UsernameAttributes:
+      - email
+      Policies:
+        PasswordPolicy:
+          MinimumLength: 8
+          RequireUppercase: true
+          RequireLowercase: true
+          RequireNumbers: true
+          RequireSymbols: true
+  GatewayUserpoolDomain:
+    Type: AWS::Cognito::UserPoolDomain
+    Properties:
+      Domain:
+        Fn::Sub: ${AWS::StackName}-auth
+      UserPoolId:
+        Ref: GatewayUserPool
+  GatewayResourceServer:
+    Type: AWS::Cognito::UserPoolResourceServer
+    Properties:
+      UserPoolId:
+        Ref: GatewayUserPool
+      Identifier: gateway
+      Name: GatewayAPI
+      Scopes:
+      - ScopeName: invoke
+        ScopeDescription: Permission to call the gateway API
+  HumanAppClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName:
+        Fn::Sub: ${AWS::StackName}-HumanAppClient
+      UserPoolId:
+        Ref: GatewayUserPool
+      ExplicitAuthFlows:
+      - ALLOW_USER_PASSWORD_AUTH
+      - ALLOW_REFRESH_TOKEN_AUTH
+      GenerateSecret: false
+      AllowedOAuthFlows:
+      - code
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes:
+      - openid
+      - email
+      CallbackURLs:
+      - https://example.com/callback
+      SupportedIdentityProviders:
+      - COGNITO
+  MachineAppClient:
+    Type: AWS::Cognito::UserPoolClient
+    Properties:
+      ClientName:
+        Fn::Sub: ${AWS::StackName}-machine-client
+      UserPoolId:
+        Ref: GatewayUserPool
+      GenerateSecret: true
+      AllowedOAuthFlows:
+      - client_credentials
+      AllowedOAuthFlowsUserPoolClient: true
+      AllowedOAuthScopes:
+      - gateway/invoke
+      SupportedIdentityProviders:
+      - COGNITO
+    DependsOn: GatewayResourceServer
 Outputs:
   ApiUrl:
     Description: Base URL for the deployed API
     Value:
       Fn::Sub: https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/
+  UserPoolDomain:
+    Value:
+      Fn::Sub: https://${AWS::StackName}-auth.auth.${AWS::Region}.amazoncognito.com
+  UserPoolId:
+    Value:
+      Ref: GatewayUserPool
+  MachineAppClientId:
+    Value:
+      Ref: MachineAppClient
