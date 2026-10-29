@@ -1,0 +1,50 @@
+AWSTemplateFormatVersion: '2010-09-09'
+#This Tells the AWS CloudFormation that this file is a SAM Template,
+# which let us write Serverless Functions.
+Transform: AWS::Serverless-2016-10-31
+Description: Civic Pulse API - AI Agent Traffic Gateway
+
+# Matches your local Node Version
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: nodejs24.x
+
+
+Resources:
+  GatewayFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      #Run the Lambda function from the dist folder, which is created by the build script.
+      Handler: lambda.handler
+      CodeUri: ../dist/
+      Environment:
+        Variables:
+        # Set the name of the rate limit table as an environment variable.
+          RATE_LIMIT_TABLE_NAME: !Ref RateLimitTable
+      Policies:
+      # Grant the Lambda function permissions to read and write to the DynamoDB table.
+        - DynamoDBCrudPolicy:
+            TableName: !Ref RateLimitTable
+      Events:
+      # Define an API Gateway event that triggers the Lambda function for any HTTP request.
+        AnyRequest:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+
+# Define a DynamoDB table to store rate limit data.
+  RateLimitTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: !Sub ${AWS::StackName}-RateLimitTable
+      PrimaryKey:
+        Name: clientId
+        Type: String
+# Prints the HTTPS URL For Testing 
+Outputs:
+  ApiUrl:
+    Description: Base URL for the deployed API
+    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"

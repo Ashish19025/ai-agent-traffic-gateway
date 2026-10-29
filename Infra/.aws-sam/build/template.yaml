@@ -1,0 +1,43 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Civic Pulse API - AI Agent Traffic Gateway
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: nodejs24.x
+Resources:
+  GatewayFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: lambda.handler
+      CodeUri: GatewayFunction
+      Environment:
+        Variables:
+          RATE_LIMIT_TABLE_NAME:
+            Ref: RateLimitTable
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: RateLimitTable
+      Events:
+        AnyRequest:
+          Type: Api
+          Properties:
+            Path: /{proxy+}
+            Method: ANY
+    Metadata:
+      SamResourceId: GatewayFunction
+  RateLimitTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName:
+        Fn::Sub: ${AWS::StackName}-RateLimitTable
+      PrimaryKey:
+        Name: clientId
+        Type: String
+Outputs:
+  ApiUrl:
+    Description: Base URL for the deployed API
+    Value:
+      Fn::Sub: https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/
