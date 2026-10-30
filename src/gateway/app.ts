@@ -8,7 +8,7 @@ const AGENT_POLICY: BucketPolicy = { capacity: 5, refillRatePerSecond: 1 };
 const HUMAN_POLICY: BucketPolicy = { capacity: 20, refillRatePerSecond: 5 };
 
 interface AuthorizerContext {
-  callerType: "agent" | "human";
+  callerType?: "agent" | "human";
   clientId?: string;
   email?: string;
   accessToken?: string;
