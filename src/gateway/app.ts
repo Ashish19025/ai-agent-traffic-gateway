@@ -20,6 +20,17 @@ function getAuthorizerContext(request: FastifyRequest): AuthorizerContext {
   return awsLambdaRequest.awsLambda?.event?.requestContext?.authorizer ?? {};
 }
 
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS ?? "").split(",").map((e) => e.trim()).filter(Boolean);
+
+// This function restricts access to human callers on the admin allowlist.
+async function requireAdmin(request: FastifyRequest, reply: FastifyReply): Promise<void> {
+  const authContext = getAuthorizerContext(request);
+  const isAdmin = authContext.callerType === "human" && !!authContext.email && ADMIN_EMAILS.includes(authContext.email);
+  if (!isAdmin) {
+    reply.code(403).send({ error: "forbidden" });
+  }
+}
+
 // This function checks the rate limit for a given request and sends an appropriate response if the limit is exceeded.
 async function checkRateLimit(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const authContext = getAuthorizerContext(request);
@@ -69,7 +80,7 @@ export function buildApp(): FastifyInstance {
     }
   });
 
-  app.get("/v1/report", async () => {
+  app.get("/v1/report", { preHandler: requireAdmin }, async () => {
     return buildReport();
   });
 

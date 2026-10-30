@@ -18,19 +18,28 @@ const RATE_LIMIT_RATIO_THRESHOLD = 0.5;
 const logsClient = new CloudWatchLogsClient({});
 const dynamoClient = DynamoDBDocumentClient.from(new DynamoDBClient({}));
 
+
+// This interface represents the statistics for a client within a given time window 
 interface ClientWindowStats {
   identity: string;
   totalRequests: number;
   rateLimitedRequests: number;
 }
 
+
+// This Lambda function scans the cloudewatch logs for recent traffic and flags clients that are anamalous based on the defined thresholds. 
 export const handler = async (): Promise<void> => {
+  // Determine the time window for analysis
   const nowMs = Date.now();
+  // The start of the window is WINDOW_MINUTES minutes ago
   const windowStartMs = nowMs - WINDOW_MINUTES * 60 * 1000;
 
+  // Query recent traffic from CloudWatch Logs and identify anomalous clients
   const stats = await queryRecentTraffic(windowStartMs, nowMs);
+  // Filter the stats to find clients that are anomalous based on the defined thresholds.
   const flagged = stats.filter(isAnomalous);
 
+  // Record flagged clients in DynamoDB
   for (const client of flagged) {
     await recordFlag(client, windowStartMs, nowMs);
   }
@@ -49,6 +58,7 @@ async function queryRecentTraffic(
     | filter @message like /request completed/
   `;
 
+  // Start the Logs Insights query and wait for it to complete
   const startResponse = await logsClient.send(
     new StartQueryCommand({
       logGroupName: LOG_GROUP_NAME,
@@ -59,9 +69,11 @@ async function queryRecentTraffic(
     }),
   );
 
+  // Poll for the query results until the query completes or fails
   const queryId = startResponse.queryId!;
   const rows = await pollQueryResults(queryId);
 
+  // Aggregate the results by client identity, counting total requests and rate-limited requests.
   const byIdentity = new Map<string, ClientWindowStats>();
   for (const row of rows) {
     const identity = row.find((f) => f.field === "identity")?.value;
@@ -81,6 +93,9 @@ async function queryRecentTraffic(
   return Array.from(byIdentity.values());
 }
 
+
+// Polls the Logs Insights query results until the query completes or fails, 
+// returning the results as an array of rows, where each row is an array of field-value pairs.
 async function pollQueryResults(
   queryId: string,
 ): Promise<{ field?: string; value?: string }[][]> {
@@ -113,6 +128,8 @@ function isAnomalous(stats: ClientWindowStats): boolean {
   return ratio >= RATE_LIMIT_RATIO_THRESHOLD;
 }
 
+// Records a flagged client in DynamoDB with the reason for flagging, the total requests, 
+// rate-limited requests, and timestamps for the window start and detection time.
 async function recordFlag(
   client: ClientWindowStats,
   windowStartMs: number,

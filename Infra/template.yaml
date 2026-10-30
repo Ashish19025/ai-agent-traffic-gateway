@@ -12,6 +12,12 @@ Globals:
     Runtime: nodejs24.x
 
 
+Parameters:
+  AdminEmails:
+    Type: String
+    Description: Comma-separated list of human caller emails allowed to call /v1/report
+    Default: ""
+
 Resources:
   GatewayFunction:
     Type: AWS::Serverless::Function
@@ -26,6 +32,7 @@ Resources:
           RATE_LIMIT_TABLE_NAME: !Ref RateLimitTable
           GATEWAY_LOG_GROUP_NAME: !Sub /aws/lambda/${AWS::StackName}-GatewayFunction
           ANOMALY_FLAGS_TABLE_NAME: !Ref AnomalyFlagsTable
+          ADMIN_EMAILS: !Ref AdminEmails
       Policies:
       # Grant the Lambda function permissions to read and write to the DynamoDB table.
         - DynamoDBCrudPolicy:
