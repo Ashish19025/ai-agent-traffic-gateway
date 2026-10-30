@@ -47,8 +47,8 @@ export const handler = async (event) => {
     }
 };
 function wildcardResource(methodArn) {
-    const [arnPrefix] = methodArn.split("/", 2);
-    return `${arnPrefix}/*/*`;
+    const arnPrefix = methodArn.split("/")[0];
+    return `${arnPrefix}/*`;
 }
 function buildPolicy(effect, resource) {
     return {

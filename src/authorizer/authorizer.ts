@@ -59,8 +59,8 @@ export const handler = async (
 };
 
 function wildcardResource(methodArn: string): string {
-  const [arnPrefix] = methodArn.split("/", 2);
-  return `${arnPrefix}/*/*`;
+  const arnPrefix = methodArn.split("/")[0];
+  return `${arnPrefix}/*`;
 }
 
 function buildPolicy(

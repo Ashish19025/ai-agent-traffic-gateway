@@ -14,11 +14,13 @@ interface AuthorizerContext {
   accessToken?: string;
 }
 
+// This function extracts the authorizer context from the Fastify request object.
 function getAuthorizerContext(request: FastifyRequest): AuthorizerContext {
   const awsLambdaRequest = request as FastifyRequest & { awsLambda?: { event?: { requestContext?: { authorizer?: AuthorizerContext } } } }
   return awsLambdaRequest.awsLambda?.event?.requestContext?.authorizer ?? {};
 }
 
+// This function checks the rate limit for a given request and sends an appropriate response if the limit is exceeded.
 async function checkRateLimit(request: FastifyRequest, reply: FastifyReply): Promise<void> {
   const authContext = getAuthorizerContext(request);
   const callertype = authContext.callerType ?? "agent";
@@ -44,9 +46,28 @@ export function buildApp(): FastifyInstance {
 
   app.get("/health", async () => ({ status: "ok" }));
 
-  app.get("/v1/data", { preHandler: checkRateLimit }, async () => {
-    return { data: "this is a protected resource" };
+  app.get("/v1/data", { preHandler: checkRateLimit }, async (request) => {
+    const authContext = getAuthorizerContext(request);
+    return { data: "this is a protected resource" ,
+      callerType: authContext.callerType?? "agent",
+      identity: authContext.callerType === "human" ? authContext.email : authContext.clientId,
+    };
   })
+
+  app.addHook("onResponse", async (request, reply) => {
+    if (request.url.startsWith("/v1/")) {
+      const authContext = getAuthorizerContext(request);
+      request.log.info({
+        callerType: authContext.callerType ?? "agent",
+        identity: authContext.callerType === "human" ? authContext.email : authContext.clientId,
+        route: request.url,
+        method: request.method,
+        statusCode: reply.statusCode,
+        latencyMs: reply.elapsedTime,
+        rateLimited: reply.statusCode === 429,
+      }, "request completed");
+    }
+  });
 
   return app;
 }
