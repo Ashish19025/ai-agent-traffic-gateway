@@ -19,7 +19,7 @@ export const handler = async (
 
     return {
       principalId: payload.sub,
-      policyDocument: buildPolicy("Allow", event.methodArn),
+      policyDocument: buildPolicy("Allow", wildcardResource(event.methodArn)),
       context: {
         clientId: payload.client_id as string,
         scope: payload.scope as string,
@@ -32,6 +32,11 @@ export const handler = async (
     };
   }
 };
+
+function wildcardResource(methodArn: string): string {
+  const [arnPrefix] = methodArn.split("/", 2);
+  return `${arnPrefix}/*/*`;
+}
 
 function buildPolicy(
   effect: "Allow" | "Deny",

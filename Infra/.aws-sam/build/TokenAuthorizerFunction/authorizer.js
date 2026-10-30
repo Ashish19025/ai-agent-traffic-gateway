@@ -10,7 +10,7 @@ export const handler = async (event) => {
         const payload = await verifier.verify(event.authorizationToken);
         return {
             principalId: payload.sub,
-            policyDocument: buildPolicy("Allow", event.methodArn),
+            policyDocument: buildPolicy("Allow", wildcardResource(event.methodArn)),
             context: {
                 clientId: payload.client_id,
                 scope: payload.scope,
@@ -24,6 +24,10 @@ export const handler = async (event) => {
         };
     }
 };
+function wildcardResource(methodArn) {
+    const [arnPrefix] = methodArn.split("/", 2);
+    return `${arnPrefix}/*/*`;
+}
 function buildPolicy(effect, resource) {
     return {
         Version: "2012-10-17",

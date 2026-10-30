@@ -18,7 +18,7 @@ Resources:
     Properties:
       #Run the Lambda function from the dist folder, which is created by the build script.
       Handler: lambda.handler
-      CodeUri: ../dist/
+      CodeUri: ../dist/gateway/
       Environment:
         Variables:
         # Set the name of the rate limit table as an environment variable.
@@ -53,7 +53,7 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Handler: authorizer.handler
-      CodeUri: ../dist/
+      CodeUri: ../dist/authorizer/
       Environment:
         Variables:
           USER_POOL_ID: !Ref GatewayUserPool

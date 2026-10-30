@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc && copyfiles package.json dist",
+    "build": "tsc && copyfiles -u 2 src/gateway/package.json dist/gateway && copyfiles -u 2 src/authorizer/package.json dist/authorizer",
     "watch": "tsc -w",
     "test": "vitest run",
     "test:watch": "vitest"
