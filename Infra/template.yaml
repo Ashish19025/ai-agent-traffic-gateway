@@ -34,6 +34,30 @@ Resources:
           Properties:
             Path: /{proxy+}
             Method: ANY
+            RestApiId: !Ref GatewayApi
+
+# Define the API Gateway with a custom Lambda authorizer so requests must carry a valid access token.
+  GatewayApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        DefaultAuthorizer: MachineTokenAuthorizer
+        Authorizers:
+          MachineTokenAuthorizer:
+            FunctionArn: !GetAtt TokenAuthorizerFunction.Arn
+            Identity:
+              Header: Authorization
+
+  TokenAuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: authorizer.handler
+      CodeUri: ../dist/
+      Environment:
+        Variables:
+          USER_POOL_ID: !Ref GatewayUserPool
+          MACHINE_CLIENT_ID: !Ref MachineAppClient
 
 # Define a DynamoDB table to store rate limit data.
   RateLimitTable:
@@ -108,6 +132,10 @@ Resources:
         AllowedOAuthFlowsUserPoolClient: true
         AllowedOAuthScopes:
           - gateway/invoke
+
+
+
+          
         SupportedIdentityProviders:
           - COGNITO  
     DependsOn: GatewayResourceServer    
@@ -117,7 +145,7 @@ Resources:
 Outputs:
   ApiUrl:
     Description: Base URL for the deployed API
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
+    Value: !Sub "https://${GatewayApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/"
   
   UserPoolDomain:
     Value: !Sub "https://${AWS::StackName}-auth.auth.${AWS::Region}.amazoncognito.com"

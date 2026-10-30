@@ -7,6 +7,6 @@ architecture = "x86_64"
 handler = "lambda.handler"
 manifest_hash = ""
 packagetype = "Zip"
-functions = ["GatewayFunction"]
+functions = ["GatewayFunction", "TokenAuthorizerFunction"]
 
 [layer_build_definitions]

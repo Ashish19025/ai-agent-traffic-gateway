@@ -26,8 +26,37 @@ Resources:
           Properties:
             Path: /{proxy+}
             Method: ANY
+            RestApiId:
+              Ref: GatewayApi
     Metadata:
       SamResourceId: GatewayFunction
+  GatewayApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: Prod
+      Auth:
+        DefaultAuthorizer: MachineTokenAuthorizer
+        Authorizers:
+          MachineTokenAuthorizer:
+            FunctionArn:
+              Fn::GetAtt:
+              - TokenAuthorizerFunction
+              - Arn
+            Identity:
+              Header: Authorization
+  TokenAuthorizerFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: authorizer.handler
+      CodeUri: TokenAuthorizerFunction
+      Environment:
+        Variables:
+          USER_POOL_ID:
+            Ref: GatewayUserPool
+          MACHINE_CLIENT_ID:
+            Ref: MachineAppClient
+    Metadata:
+      SamResourceId: TokenAuthorizerFunction
   RateLimitTable:
     Type: AWS::Serverless::SimpleTable
     Properties:
@@ -110,7 +139,7 @@ Outputs:
   ApiUrl:
     Description: Base URL for the deployed API
     Value:
-      Fn::Sub: https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/
+      Fn::Sub: https://${GatewayApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/
   UserPoolDomain:
     Value:
       Fn::Sub: https://${AWS::StackName}-auth.auth.${AWS::Region}.amazoncognito.com
