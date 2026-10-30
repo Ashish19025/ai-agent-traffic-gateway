@@ -19,14 +19,26 @@ Resources:
       #Run the Lambda function from the dist folder, which is created by the build script.
       Handler: lambda.handler
       CodeUri: ../dist/gateway/
+      FunctionName: !Sub ${AWS::StackName}-GatewayFunction
       Environment:
         Variables:
         # Set the name of the rate limit table as an environment variable.
           RATE_LIMIT_TABLE_NAME: !Ref RateLimitTable
+          GATEWAY_LOG_GROUP_NAME: !Sub /aws/lambda/${AWS::StackName}-GatewayFunction
+          ANOMALY_FLAGS_TABLE_NAME: !Ref AnomalyFlagsTable
       Policies:
       # Grant the Lambda function permissions to read and write to the DynamoDB table.
         - DynamoDBCrudPolicy:
             TableName: !Ref RateLimitTable
+        - DynamoDBReadPolicy:
+            TableName: !Ref AnomalyFlagsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:StartQuery
+                - logs:GetQueryResults
+                - logs:DescribeLogGroups
+              Resource: "*"
       Events:
       # Define an API Gateway event that triggers the Lambda function for any HTTP request.
         AnyRequest:
@@ -68,6 +80,42 @@ Resources:
       PrimaryKey:
         Name: clientId
         Type: String
+
+# Define a DynamoDB table to store flagged anomalous clients (Stage 8).
+  AnomalyFlagsTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName: !Sub ${AWS::StackName}-AnomalyFlagsTable
+      PrimaryKey:
+        Name: identity
+        Type: String
+
+# Scheduled Lambda (Stage 8) that scans recent traffic logs for abuse patterns
+# and writes flagged clients into AnomalyFlagsTable.
+  AnomalyDetectorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: anomaly-detector.handler
+      CodeUri: ../dist/anomaly-detector/
+      Environment:
+        Variables:
+          GATEWAY_LOG_GROUP_NAME: !Sub /aws/lambda/${AWS::StackName}-GatewayFunction
+          ANOMALY_FLAGS_TABLE_NAME: !Ref AnomalyFlagsTable
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref AnomalyFlagsTable
+        - Statement:
+            - Effect: Allow
+              Action:
+                - logs:StartQuery
+                - logs:GetQueryResults
+                - logs:DescribeLogGroups
+              Resource: "*"
+      Events:
+        ScheduledScan:
+          Type: Schedule
+          Properties:
+            Schedule: rate(5 minutes)
 
   GatewayUserPool:
     Type: AWS::Cognito::UserPool

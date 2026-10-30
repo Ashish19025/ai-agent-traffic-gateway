@@ -4,7 +4,7 @@
   "private": true,
   "type": "module",
   "scripts": {
-    "build": "tsc && copyfiles -u 2 src/gateway/package.json dist/gateway && copyfiles -u 2 src/authorizer/package.json dist/authorizer",
+    "build": "tsc && copyfiles -u 2 src/gateway/package.json dist/gateway && copyfiles -u 2 src/authorizer/package.json dist/authorizer && copyfiles -u 2 src/anomaly-detector/package.json dist/anomaly-detector",
     "watch": "tsc -w",
     "test": "vitest run",
     "test:watch": "vitest"
@@ -17,6 +17,7 @@
     "vitest": "^2.1.0"
   },
   "dependencies": {
+    "@aws-sdk/client-cloudwatch-logs": "^3.1159.0",
     "@aws-sdk/client-dynamodb": "^3.1159.0",
     "@aws-sdk/lib-dynamodb": "^3.1159.0",
     "@fastify/aws-lambda": "^6.4.2",

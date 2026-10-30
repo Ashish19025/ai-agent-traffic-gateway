@@ -18,4 +18,13 @@ manifest_hash = ""
 packagetype = "Zip"
 functions = ["TokenAuthorizerFunction"]
 
+[function_build_definitions.c2655874-fec0-4579-8216-44fbe830a6e7]
+codeuri = "C:\\Users\\ashis\\projects\\civicpulse\\dist\\anomaly-detector"
+runtime = "nodejs24.x"
+architecture = "x86_64"
+handler = "anomaly-detector.handler"
+manifest_hash = ""
+packagetype = "Zip"
+functions = ["AnomalyDetectorFunction"]
+
 [layer_build_definitions]

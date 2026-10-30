@@ -1,7 +1,7 @@
 import Fastify, { type FastifyInstance, type FastifyRequest, type FastifyReply} from "fastify";
 import { consumeTokenForClient } from "./modules/rate-limiting/token-bucket-store.js";
 import type { BucketPolicy } from "./modules/rate-limiting/token-bucket.js";
-
+import { buildReport } from "./modules/reporting/report.js";
 // Placeholder policy until the classification/auth stage decides this
 // per-client instead of hardcoding one rate for everyone.
 const AGENT_POLICY: BucketPolicy = { capacity: 5, refillRatePerSecond: 1 };
@@ -67,6 +67,10 @@ export function buildApp(): FastifyInstance {
         rateLimited: reply.statusCode === 429,
       }, "request completed");
     }
+  });
+
+  app.get("/v1/report", async () => {
+    return buildReport();
   });
 
   return app;

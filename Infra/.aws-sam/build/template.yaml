@@ -12,14 +12,30 @@ Resources:
     Properties:
       Handler: lambda.handler
       CodeUri: GatewayFunction
+      FunctionName:
+        Fn::Sub: ${AWS::StackName}-GatewayFunction
       Environment:
         Variables:
           RATE_LIMIT_TABLE_NAME:
             Ref: RateLimitTable
+          GATEWAY_LOG_GROUP_NAME:
+            Fn::Sub: /aws/lambda/${AWS::StackName}-GatewayFunction
+          ANOMALY_FLAGS_TABLE_NAME:
+            Ref: AnomalyFlagsTable
       Policies:
       - DynamoDBCrudPolicy:
           TableName:
             Ref: RateLimitTable
+      - DynamoDBReadPolicy:
+          TableName:
+            Ref: AnomalyFlagsTable
+      - Statement:
+        - Effect: Allow
+          Action:
+          - logs:StartQuery
+          - logs:GetQueryResults
+          - logs:DescribeLogGroups
+          Resource: '*'
       Events:
         AnyRequest:
           Type: Api
@@ -67,6 +83,43 @@ Resources:
       PrimaryKey:
         Name: clientId
         Type: String
+  AnomalyFlagsTable:
+    Type: AWS::Serverless::SimpleTable
+    Properties:
+      TableName:
+        Fn::Sub: ${AWS::StackName}-AnomalyFlagsTable
+      PrimaryKey:
+        Name: identity
+        Type: String
+  AnomalyDetectorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Handler: anomaly-detector.handler
+      CodeUri: AnomalyDetectorFunction
+      Environment:
+        Variables:
+          GATEWAY_LOG_GROUP_NAME:
+            Fn::Sub: /aws/lambda/${AWS::StackName}-GatewayFunction
+          ANOMALY_FLAGS_TABLE_NAME:
+            Ref: AnomalyFlagsTable
+      Policies:
+      - DynamoDBCrudPolicy:
+          TableName:
+            Ref: AnomalyFlagsTable
+      - Statement:
+        - Effect: Allow
+          Action:
+          - logs:StartQuery
+          - logs:GetQueryResults
+          - logs:DescribeLogGroups
+          Resource: '*'
+      Events:
+        ScheduledScan:
+          Type: Schedule
+          Properties:
+            Schedule: rate(5 minutes)
+    Metadata:
+      SamResourceId: AnomalyDetectorFunction
   GatewayUserPool:
     Type: AWS::Cognito::UserPool
     Properties:
