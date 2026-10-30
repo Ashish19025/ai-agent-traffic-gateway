@@ -58,6 +58,7 @@ Resources:
         Variables:
           USER_POOL_ID: !Ref GatewayUserPool
           MACHINE_CLIENT_ID: !Ref MachineAppClient
+          HUMAN_CLIENT_ID: !Ref HumanAppClient
 
 # Define a DynamoDB table to store rate limit data.
   RateLimitTable:

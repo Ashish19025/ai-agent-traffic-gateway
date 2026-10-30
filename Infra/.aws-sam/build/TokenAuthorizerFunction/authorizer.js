@@ -1,19 +1,41 @@
 import { CognitoJwtVerifier } from "aws-jwt-verify";
-const verifier = CognitoJwtVerifier.create({
+const machineVerifier = CognitoJwtVerifier.create({
     userPoolId: process.env.USER_POOL_ID,
     tokenUse: "access",
     clientId: process.env.MACHINE_CLIENT_ID,
     scope: "gateway/invoke",
 });
+const humanVerifier = CognitoJwtVerifier.create({
+    userPoolId: process.env.USER_POOL_ID,
+    tokenUse: "id",
+    clientId: process.env.HUMAN_CLIENT_ID,
+});
 export const handler = async (event) => {
+    // this is the payload for machine users
     try {
-        const payload = await verifier.verify(event.authorizationToken);
+        const payload = await machineVerifier.verify(event.authorizationToken);
         return {
             principalId: payload.sub,
             policyDocument: buildPolicy("Allow", wildcardResource(event.methodArn)),
             context: {
                 clientId: payload.client_id,
                 scope: payload.scope,
+                callerType: "agent",
+            },
+        };
+    }
+    catch {
+        // not a valid machine token, try to verify as a human token 
+    }
+    // this is the payload for human users 
+    try {
+        const payload = await humanVerifier.verify(event.authorizationToken);
+        return {
+            principalId: payload.sub,
+            policyDocument: buildPolicy("Allow", wildcardResource(event.methodArn)),
+            context: {
+                email: payload.email,
+                callerType: "human",
             },
         };
     }

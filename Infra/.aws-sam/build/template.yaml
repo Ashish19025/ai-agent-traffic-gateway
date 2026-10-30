@@ -55,6 +55,8 @@ Resources:
             Ref: GatewayUserPool
           MACHINE_CLIENT_ID:
             Ref: MachineAppClient
+          HUMAN_CLIENT_ID:
+            Ref: HumanAppClient
     Metadata:
       SamResourceId: TokenAuthorizerFunction
   RateLimitTable:
